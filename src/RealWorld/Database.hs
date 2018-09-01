@@ -22,7 +22,7 @@ import           Database.Persist.Postgresql (ConnectionPool, Entity (..),
                                               runSqlPersistMPool)
 import           Database.Persist.TH         (mkMigrate, mkPersist,
                                               persistLowerCase, share,
-                                              sqlSettings, sqlSettings)
+                                              sqlSettings)
 import           RealWorld.Api.Types         (RegistrationData (..))
 import           RealWorld.Config            (AppM, Config (..))
 

@@ -73,25 +73,22 @@ type API = "api" :> UserAPI
 -- Handlers -------------------------------------------------------------------
 
 register :: UserBody RegistrationData -> AppM (UserBody User)
-register UserBody { user = RegistrationData { email, username, password } } =
-  do
-    pwh <- liftIO $ hashPassword password
-    case pwh of
-      Just pwh -> do
-        DB.runDb $ insert (DB.User email username pwh)
-        token <- createToken
-        pure $ UserBody User { username = username
-                             , email = email
-                             , token = token
-                             , image = Nothing
-                             , bio = Nothing
-                             }
-
-
-      Nothing -> throwError err500
- where
-  hashPassword pw =
-    hashPasswordUsingPolicy slowerBcryptHashingPolicy (T.encodeUtf8 pw)
+register UserBody { user = RegistrationData { email, username, password } } = do
+  pwh <- liftIO $ hashPassword password
+  case pwh of
+    Just pwh -> do
+      DB.runDb $ insert (DB.User email username pwh)
+      token <- createToken
+      pure $ UserBody User { username = username
+                           , email = email
+                           , token = token
+                           , image = Nothing
+                           , bio = Nothing
+                           }
+    Nothing -> throwError err500
+  where
+    hashPassword pw =
+      hashPasswordUsingPolicy slowerBcryptHashingPolicy (T.encodeUtf8 pw)
 
 login :: UserBody LoginData -> AppM (UserBody User)
 login UserBody { user = LoginData { username, password } } = do
@@ -110,11 +107,6 @@ login UserBody { user = LoginData { username, password } } = do
         else throwError err401
 
 
-createToken :: AppM Text
-createToken =
-  asks configJwtSecret >>= \s ->
-    pure $ Jwt.encodeSigned Jwt.HS256 (Jwt.secret s) Jwt.def
-
 serverHandler :: ServerT API AppM
 serverHandler = register :<|> login
 
@@ -123,19 +115,18 @@ serverHandler = register :<|> login
 authHandler :: Config -> AuthHandler Request AuthenticatedUser
 authHandler Config { configJwtSecret = jwtSecret } = mkAuthHandler handler
  where
-  handler :: Request -> Handler AuthenticatedUser
-  handler req = case getUserId req of
-    Nothing -> throwError err401
-    Just id -> pure $ AuthenticatedUser id
+   handler :: Request -> Handler AuthenticatedUser
+   handler req = case getUserId req of
+     Nothing -> throwError err401
+     Just id -> pure $ AuthenticatedUser id
 
-  getUserId :: Request -> Maybe Text
-  getUserId req = do
-    authHeader <- lookup "Authorization" (requestHeaders req)
-    token <- BS.stripPrefix "Token " authHeader
-    sig <- Jwt.decodeAndVerifySignature (Jwt.secret jwtSecret)
-                                               (T.decodeUtf8 token)
-    let claimsMap = unregisteredClaims (Jwt.claims sig)
-    Map.lookup "userId" claimsMap >>= Aeson.parseMaybe Aeson.parseJSON
+   getUserId :: Request -> Maybe Text
+   getUserId req = do
+     authHeader <- lookup "Authorization" (requestHeaders req)
+     token <- BS.stripPrefix "Token " authHeader
+     sig <- Jwt.decodeAndVerifySignature (Jwt.secret jwtSecret) (T.decodeUtf8 token)
+     let claimsMap = unregisteredClaims (Jwt.claims sig)
+     Map.lookup "userId" claimsMap >>= Aeson.parseMaybe Aeson.parseJSON
 
 
 server :: Config -> Server API
@@ -168,4 +159,8 @@ runApi = do
 
 
 -- Helpers
+createToken :: AppM Text
+createToken =
+  asks configJwtSecret >>= \s ->
+    pure $ Jwt.encodeSigned Jwt.HS256 (Jwt.secret s) Jwt.def
 

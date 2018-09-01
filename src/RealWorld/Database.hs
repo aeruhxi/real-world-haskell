@@ -1,37 +1,30 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE QuasiQuotes                #-}
+{-# LANGUAGE TemplateHaskell            #-}
+{-# LANGUAGE TypeFamilies               #-}
 
 module RealWorld.Database
-  ( User(..)
-  , createUser
-  , migrateAll
-  )
+
 where
 
-import           Control.Monad.IO.Class         ( liftIO )
-import           Database.Persist.Postgresql    ( runSqlPersistMPool
-                                                , insert
-                                                , delete
-                                                , Entity(..)
-                                                , fromSqlKey
-                                                , ConnectionPool
-                                                )
-import           Database.Persist.TH            ( mkMigrate
-                                                , persistLowerCase
-                                                , share
-                                                , sqlSettings
-                                                , sqlSettings
-                                                , mkPersist
-                                                )
-import           Data.Text                      ( Text )
-import           RealWorld.Api.Types            ( RegistrationData(..) )
-import           Data.Int                       ( Int64 )
+import           Control.Monad.IO.Class      (liftIO)
+import           Control.Monad.Reader        (asks)
+import           Data.ByteString             (ByteString)
+import           Data.Int                    (Int64)
+import           Data.Text                   (Text)
+import           Database.Persist.Postgresql (ConnectionPool, Entity (..),
+                                              delete, fromSqlKey, insert,
+                                              runSqlPersistMPool)
+import           Database.Persist.TH         (mkMigrate, mkPersist,
+                                              persistLowerCase, share,
+                                              sqlSettings, sqlSettings)
+import           RealWorld.Api.Types         (RegistrationData (..))
+import           RealWorld.Config            (AppM, Config (..))
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 User sql=users
@@ -41,14 +34,11 @@ User sql=users
   username Text sqlType=varchar(50)
   UniqueUsername username
 
-  password Text
+  password ByteString
 
   deriving Show
 |]
 
--- Model functions
-createUser :: ConnectionPool -> RegistrationData -> IO Int64
-createUser pool RegistrationData { username, email, password } =
-  flip runSqlPersistMPool pool $ do
-    userId <- insert $ User email username password
-    pure (fromSqlKey userId)
+runDb query = do
+  pool <- asks configPool
+  liftIO $ runSqlPersistMPool query pool

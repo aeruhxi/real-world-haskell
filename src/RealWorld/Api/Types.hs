@@ -1,6 +1,6 @@
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
 
 module RealWorld.Api.Types
   ( User(..)
@@ -14,52 +14,57 @@ module RealWorld.Api.Types
   , CommentBody(..)
   , LoginData(..)
   , RegistrationData(..)
+  , AuthenticatedUser(..)
   )
 where
 
+import           Data.Aeson      (FromJSON (..), ToJSON (..))
+import           Data.Int        (Int64)
 import           Data.Text
-import           Data.Time.Clock                ( UTCTime )
+import           Data.Time.Clock (UTCTime)
 import           GHC.Generics
-import           Data.Int                       ( Int64 )
-import           Data.Aeson                     ( FromJSON(..)
-                                                , ToJSON(..)
-                                                )
+
 
 -- Models for JSON
 data User = User
-  { email :: Text
-  , token :: Text
+  { email    :: Text
+  , token    :: Text
   , username :: Text
-  , bio :: Maybe Text
-  , image :: Maybe Text
+  , bio      :: Maybe Text
+  , image    :: Maybe Text
   } deriving (Show, Generic, ToJSON)
 
+data AuthenticatedUser = AuthenticatedUser
+  { userId :: Text
+  } deriving (Show, Generic, ToJSON, FromJSON)
+
+
 data Profile = Profile
-  { username :: Text
-  , bio :: Text
-  , image :: Text
+  { username  :: Text
+  , bio       :: Text
+  , image     :: Text
   , following :: Bool
   } deriving (Show, Generic, ToJSON)
 
 data Article = Article
-  { slug :: Text
-  , title :: Text
-  , description :: Text
-  , body :: Text
-  , tags :: [Tag]
-  , createdAt :: UTCTime
-  , updatedAt :: UTCTime
-  , favorited :: Bool
+  { slug           :: Text
+  , title          :: Text
+  , description    :: Text
+  , body           :: Text
+  , tags           :: [Tag]
+  , createdAt      :: UTCTime
+  , updatedAt      :: UTCTime
+  , favorited      :: Bool
   , favoritesCount :: Int64
-  , author :: Profile
+  , author         :: Profile
   } deriving (Show, Generic, ToJSON)
 
 data Comment = Comment
-  { id :: Int64
+  { id        :: Text
   , createdAt :: UTCTime
   , updatedAt :: UTCTime
-  , body :: Text
-  , author :: Profile
+  , body      :: Text
+  , author    :: Profile
   } deriving (Show, Generic, ToJSON)
 
 newtype Tag = Tag { unTag :: String } deriving (Show, Generic, ToJSON)
@@ -78,7 +83,7 @@ data LoginData = LoginData
 data RegistrationData = RegistrationData
   { username :: Text
   , password :: Text
-  , email :: Text
+  , email    :: Text
   } deriving (Show, Generic, FromJSON)
 
 
